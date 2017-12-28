@@ -40,6 +40,9 @@ namespace BayesConsoleApplication
                 // ########
                 net.ReadFile(@"C:\Users\Patrycja\Desktop\Praca inzynierska\nastroj-ksiazka-kategoria-okrojone-poprawione.xdsl");
                 // ########
+                foreach (int handle in net)
+                Console.WriteLine("Node {0}, {1}, {2}", handle, net[handle], net.GetNodeName(handle));
+                Console.WriteLine(net[5]); 
 
                 net.UpdateBeliefs();
 
@@ -85,20 +88,73 @@ namespace BayesConsoleApplication
                 //double P_NastrojIsDobryJakaKsiazkaIsWciagajaca = aValues[outcomeIndex];
 
                 //Console.WriteLine("P(\"Nastroj\" = dobry | \"JakaKsiazka\" = wciagajaca) = " + P_NastrojIsDobryJakaKsiazkaIsWciagajaca);
-               
+                
 
-                // NASTROJ = DOBRY, KSIAZKA = WCIAGAJACA, GATUNEK???
+
                 net.ClearAllEvidence();
-                //net.ClearEvidence("Nastroj");
-                //net.ClearEvidence("JakaKsiazka");
+
+                // PYTAM O NASTROJ
                 Console.WriteLine("Jaki masz nastrój?");
                 string userinputNastroj = Console.ReadLine();
+
+                // PYTAM O CECHĘ KSIĄŻKI
                 Console.WriteLine("Jaką chciałbyś przeczytać książkę?");
                 string userInputJakaKsiazka = Console.ReadLine();
+
+                // USTAWIAM WARTOŚCI W SIECI NA PODSTAWIE ODPOWIEDZI UŻYTKOWNIKA
                 net.SetEvidence("nastroj", userinputNastroj);
                 net.SetEvidence(userInputJakaKsiazka, "tak");
-                net.UpdateBeliefs();
 
+                net.UpdateBeliefs();
+                double P_poz_luz = 0, P_poz_wciag = 0, P_poz_luz_wciag = 0;
+                double[] PValuesOfThirdLayer = { P_poz_luz, P_poz_wciag, P_poz_luz_wciag };
+                double[] FindBiggestValue = new double[10];
+                int i = 0;
+
+                // --> po wybraniu przez użytkownika nastroju oraz pożądnych cech książki tutaj musze przejść 
+                // po prawdopodopieństwach 3 warstwy
+                for (int NodeId = 7; NodeId <= 16; NodeId++)
+                {
+                    String[] aForecastOutcomeIds = net.GetOutcomeIds(net[NodeId]);
+                    int outcomeIndex1;
+                    for (outcomeIndex1 = 0; outcomeIndex1 < aForecastOutcomeIds.Length; outcomeIndex1++)
+                        if ("tak".Equals(aForecastOutcomeIds[outcomeIndex1]))
+                            break;
+
+                    double[] pValues = net.GetNodeValue(net[NodeId]);
+                    double P_ChosenBook = pValues[outcomeIndex1];
+                    
+                    // DODAJĘ WARTOŚCI PRAWDOPODOBIEŃSTW DO TABLICY
+                    FindBiggestValue[i] = P_ChosenBook;                  
+                    i++;
+
+                                                        
+                    Console.WriteLine("P(Nastroj = {0} | JakaKsiazka = {1}) = | \"Gatunek\" {2}) = {3}", userinputNastroj, userInputJakaKsiazka, net[NodeId], P_ChosenBook);
+                }
+
+                // ZNAJDUJĘ WARTOŚĆ ORAZ POZYCJĘ NAJWIĘKSZEGO PRAWDOPODOBIEŃSTWA W TABLICY
+                double maxNumber = FindBiggestValue.Max();
+                int position = Array.IndexOf(FindBiggestValue, maxNumber);
+                Console.WriteLine("max number: " + maxNumber + "index" + position);
+                string ChosenBookCategory = net[position + 7];
+
+                // WYŚWIETLAM NAZWĘ 
+                Console.WriteLine("najbardziej prawdopodobna kategoria książki: " + ChosenBookCategory);
+
+                if(ChosenBookCategory == "refWciag")
+                {
+                    Console.WriteLine("dobry wybór");
+                }
+                else {
+                    Console.WriteLine("inna kategoria niz refWciag");
+                }
+               
+                
+                
+
+
+
+                // przechodzę po wartościach odpowiedzi dla refWciag - wartości to tak lub nie
                 String[] aGatunekOutcomeIds = net.GetOutcomeIds("refWciag");
                 for (outcomeIndex = 0; outcomeIndex < aGatunekOutcomeIds.Length; outcomeIndex++)
                     if ("tak".Equals(aGatunekOutcomeIds[outcomeIndex]))
@@ -107,7 +163,7 @@ namespace BayesConsoleApplication
                 double[] aValues = net.GetNodeValue("refWciag");
                 double P_NastrojIsDobryJakaKsiazkaIsWciagajacaGatunekIsRomans = aValues[outcomeIndex];
 
-                Console.WriteLine("P(\"Nastroj\" = {0} | \"JakaKsiazka\" = {1}) = | \"Gatunek\" = poz-luz) = {2}", userinputNastroj, userInputJakaKsiazka, P_NastrojIsDobryJakaKsiazkaIsWciagajacaGatunekIsRomans);
+                //Console.WriteLine("P(\"Nastroj\" = {0} | \"JakaKsiazka\" = {1}) = | \"Gatunek\" = poz-luz) = {2}", userinputNastroj, userInputJakaKsiazka, P_NastrojIsDobryJakaKsiazkaIsWciagajacaGatunekIsRomans);
                 
 
 
@@ -151,53 +207,7 @@ namespace BayesConsoleApplication
 
                 Console.ReadKey();
 
-                //// 1. -------- UTWORZENIE SIECI --------
-                //// Creating node "Success" and setting/adding outcomes:
-                //net.AddNode(Network.NodeType.Cpt, "Success");
-                //net.SetOutcomeId("Success", 0, "Success");
-                //net.SetOutcomeId("Success", 1, "Failure");
-
-                //// Creating node "Forecast" and setting/adding outcomes:
-                //net.AddNode(Network.NodeType.Cpt, "Forecast");
-                //net.AddOutcome("Forecast", "Good");
-                //net.AddOutcome("Forecast", "Moderate");
-                //net.AddOutcome("Forecast", "Poor");
-                //net.DeleteOutcome("Forecast", 0);
-                //net.DeleteOutcome("Forecast", 0);
-
-                //// Adding an arc from "Success" to "Forecast":
-                //net.AddArc("Success", "Forecast");
-
-                //// Filling in the conditional distribution for node "Success". The 
-                //// probabilities are:
-                //// P("Success" = Success) = 0.2
-                //// P("Success" = Failure) = 0.8
-                //double[] aSuccessDef = { 0.2, 0.8 };
-                //net.SetNodeDefinition("Success", aSuccessDef);
-
-                //// Filling in the conditional distribution for node "Forecast". The 
-                //// probabilities are:
-                //// P("Forecast" = Good | "Success" = Success) = 0.4
-                //// P("Forecast" = Moderate | "Success" = Success) = 0.4
-                //// P("Forecast" = Poor | "Success" = Success) = 0.2
-                //// P("Forecast" = Good | "Success" = Failure) = 0.1
-                //// P("Forecast" = Moderate | "Success" = Failure) = 0.3
-                //// P("Forecast" = Poor | "Success" = Failure) = 0.6
-                //double[] aForecastDef = { 0.4, 0.4, 0.2, 0.1, 0.3, 0.6 };
-                //net.SetNodeDefinition("Forecast", aForecastDef);
-
-                //// Changing the nodes' spacial and visual attributes:
-                ////net.SetNodePosition("Success", 20, 20, 100, 50);
-                ////net.SetNodeBgColor("Success", Color.Tomato);
-                ////net.SetNodeTextColor("Success", Color.White);
-                ////net.SetNodeBorderColor("Success", Color.Black);
-                ////net.SetNodeBorderWidth("Success", 2);
-                ////net.SetNodePosition("Forecast", 30, 100, 90, 130);
-
-                //// Writting the network to a file:
-                //net.WriteFile(@"C:\Users\Patrycja\Documents\tutorial_a.xdsl");
-                //// ----------- KONIEC TWORZENIA SIECI ----------
-
+              
 
 
             }
